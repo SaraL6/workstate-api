@@ -28,5 +28,11 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute(60)->by($key);
         });
+
+        RateLimiter::for('auth-token', function (Request $request) {
+            $email = strtolower((string) $request->input('email'));
+
+            return Limit::perMinute(5)->by($email.'|'.$request->ip());
+        });
     }
 }

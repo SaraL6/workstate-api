@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use RuntimeException;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,11 +16,20 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $email = (string) config('workstate.demo_user.email');
+        $password = (string) config('workstate.demo_user.password');
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        if ($email === '' || $password === '') {
+            throw new RuntimeException('Set SEED_USER_EMAIL and SEED_USER_PASSWORD before seeding.');
+        }
+
+        User::query()->updateOrCreate(
+            ['email' => $email],
+            [
+                'name' => (string) config('workstate.demo_user.name'),
+                'password' => $password,
+                'email_verified_at' => now(),
+            ],
+        );
     }
 }

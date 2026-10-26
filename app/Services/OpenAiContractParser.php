@@ -6,11 +6,17 @@ use App\Exceptions\ContractParseException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\ValidationException;
 
 class OpenAiContractParser
 {
+    /**
+     * OpenAI json_object mode. ParsedContractValidator still rejects any payload
+     * that does not match the contract rule schema.
+     *
+     * @var array{type: string}
+     */
+    private const RESPONSE_FORMAT = ['type' => 'json_object'];
+
     /**
      * The contract text is sent only as the user message. The system message
      * stays fixed, and the JSON is rejected unless it matches the schema below.
@@ -24,6 +30,8 @@ Use exactly these keys:
 - remote_work_country: string. ISO 3166-1 alpha-2 country code where remote work is permitted. Use "DE" when the contract is silent and German law governs it.
 Choose the most restrictive figure when the contract states more than one. Do not add keys.
 PROMPT;
+
+    public function __construct(private ParsedContractValidator $contracts) {}
 
     /**
      * @return array{max_weekly_hours: float, allowed_overtime_cap: float, custom_rest_period_hours: float, remote_work_country: string}
@@ -47,7 +55,7 @@ PROMPT;
                 ->post($url, [
                     'model' => (string) config('services.openai.model'),
                     'temperature' => 0,
-                    'response_format' => ['type' => 'json_object'],
+                    'response_format' => self::RESPONSE_FORMAT,
                     'messages' => [
                         ['role' => 'system', 'content' => self::SYSTEM_PROMPT],
                         ['role' => 'user', 'content' => $contractText],
@@ -81,61 +89,6 @@ PROMPT;
             throw new ContractParseException('The contract parser returned an unreadable response.', 502);
         }
 
-        return $this->validate($decoded);
-    }
-
-    /**
-     * @param  array<mixed>  $payload
-     * @return array{max_weekly_hours: float, allowed_overtime_cap: float, custom_rest_period_hours: float, remote_work_country: string}
-     */
-    private function validate(array $payload): array
-    {
-        $allowed = [
-            'max_weekly_hours',
-            'allowed_overtime_cap',
-            'custom_rest_period_hours',
-            'remote_work_country',
-        ];
-        $unknown = array_diff(array_map('strval', array_keys($payload)), $allowed);
-
-        if ($unknown !== []) {
-            throw new ContractParseException(
-                'The model response did not match the contract rule schema.',
-                422,
-                ['response' => ['The response contained unexpected fields.']],
-            );
-        }
-
-        if (isset($payload['remote_work_country']) && is_string($payload['remote_work_country'])) {
-            $payload['remote_work_country'] = strtoupper($payload['remote_work_country']);
-        }
-
-        $validator = Validator::make($payload, [
-            'max_weekly_hours' => ['required', 'numeric', 'between:1,80'],
-            'allowed_overtime_cap' => ['required', 'numeric', 'between:0,40'],
-            'custom_rest_period_hours' => ['required', 'numeric', 'between:11,24'],
-            'remote_work_country' => ['required', 'string', 'regex:/^[A-Z]{2}$/'],
-        ]);
-
-        try {
-            $validated = $validator->validate();
-        } catch (ValidationException $exception) {
-            Log::warning('OpenAI contract parse failed schema validation.', [
-                'fields' => array_keys($exception->errors()),
-            ]);
-
-            throw new ContractParseException(
-                'The model response did not match the contract rule schema.',
-                422,
-                $exception->errors(),
-            );
-        }
-
-        return [
-            'max_weekly_hours' => round((float) $validated['max_weekly_hours'], 2),
-            'allowed_overtime_cap' => round((float) $validated['allowed_overtime_cap'], 2),
-            'custom_rest_period_hours' => round((float) $validated['custom_rest_period_hours'], 2),
-            'remote_work_country' => $validated['remote_work_country'],
-        ];
+        return $this->contracts->validate($decoded);
     }
 }

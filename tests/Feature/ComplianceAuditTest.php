@@ -22,7 +22,7 @@ class ComplianceAuditTest extends TestCase
 
     public function test_audit_validates_the_payload(): void
     {
-        $this->withToken('test-token')
+        $this->withToken($this->apiToken())
             ->postJson('/api/v1/compliance/audit', [
                 'employee_id' => 999,
                 'week_start' => '2026-10-18',
@@ -37,7 +37,7 @@ class ComplianceAuditTest extends TestCase
     {
         $employee = Employee::factory()->create(['federal_state' => 'NW']);
 
-        $response = $this->withToken('test-token')->postJson('/api/v1/compliance/audit', [
+        $response = $this->withToken($this->apiToken())->postJson('/api/v1/compliance/audit', [
             'employee_id' => $employee->id,
             'week_start' => '2026-10-12',
             'week_end' => '2026-10-18',
@@ -89,7 +89,7 @@ class ComplianceAuditTest extends TestCase
             ]);
         }
 
-        $response = $this->withToken('test-token')->postJson('/api/v1/compliance/audit', [
+        $response = $this->withToken($this->apiToken())->postJson('/api/v1/compliance/audit', [
             'employee_id' => $employee->id,
             'week_start' => '2026-10-12',
             'week_end' => '2026-10-18',
@@ -113,7 +113,7 @@ class ComplianceAuditTest extends TestCase
             ->map(fn (string $date): array => $this->log($date, '08:00:00', '16:30:00', 30))
             ->all();
 
-        $this->withToken('test-token')
+        $this->withToken($this->apiToken())
             ->postJson('/api/v1/compliance/audit', [
                 'employee_id' => $employee->id,
                 'week_start' => '2026-10-12',

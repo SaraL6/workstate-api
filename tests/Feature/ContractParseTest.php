@@ -3,12 +3,15 @@
 namespace Tests\Feature;
 
 use App\Services\OpenAiContractParser;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class ContractParseTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_parse_requires_the_api_token(): void
     {
         $this->postJson('/api/v1/contracts/parse', [
@@ -18,7 +21,7 @@ class ContractParseTest extends TestCase
 
     public function test_parse_validates_contract_text(): void
     {
-        $this->withToken('test-token')
+        $this->withToken($this->apiToken())
             ->postJson('/api/v1/contracts/parse', ['contract_text' => 'too short'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['contract_text']);
@@ -41,7 +44,7 @@ class ContractParseTest extends TestCase
             ]),
         ]);
 
-        $this->withToken('test-token')
+        $this->withToken($this->apiToken())
             ->postJson('/api/v1/contracts/parse', ['contract_text' => $this->contract()])
             ->assertOk()
             ->assertExactJson([
@@ -78,7 +81,7 @@ class ContractParseTest extends TestCase
             ]),
         ]);
 
-        $this->withToken('test-token')
+        $this->withToken($this->apiToken())
             ->postJson('/api/v1/contracts/parse', ['contract_text' => $this->contract()])
             ->assertUnprocessable()
             ->assertJsonPath('message', 'The model response did not match the contract rule schema.')
@@ -93,7 +96,7 @@ class ContractParseTest extends TestCase
             ], 500),
         ]);
 
-        $response = $this->withToken('test-token')
+        $response = $this->withToken($this->apiToken())
             ->postJson('/api/v1/contracts/parse', ['contract_text' => $this->contract()]);
 
         $response->assertStatus(502)
@@ -108,7 +111,7 @@ class ContractParseTest extends TestCase
             throw new ConnectionException('secret-timeout-host');
         });
 
-        $response = $this->withToken('test-token')
+        $response = $this->withToken($this->apiToken())
             ->postJson('/api/v1/contracts/parse', ['contract_text' => $this->contract()]);
 
         $response->assertStatus(503);

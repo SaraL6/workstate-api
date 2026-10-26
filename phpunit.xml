@@ -21,7 +21,6 @@
         <env name="APP_ENV" value="testing" force="true"/>
         <env name="APP_KEY" value="base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file" force="true"/>
-        <env name="WORKSTATE_API_TOKEN" value="test-token" force="true"/>
         <env name="OPENAI_API_KEY" value="test-key" force="true"/>
         <env name="OPENAI_MODEL" value="gpt-4o-mini" force="true"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
